@@ -71,12 +71,33 @@ export const getBookyId = async (req, res) => {
 
 export const getAllBooks = async (req, res) => {
     try {
-        const books = await BookModel.find();
-        res.status(200).json({ message: 'Book found successfully', books });
+        const { page = 1, limit = 10, search = "" } = req.query; 
+
+        const searchFilter = search
+            ? { title: { $regex: search, $options: "i" } }
+            : {};
+
+        const totalItems = await BookModel.countDocuments(searchFilter);
+
+        const skip = (page - 1) * limit;
+
+        const books = await BookModel.find(searchFilter)
+            .skip(skip)
+            .limit(parseInt(limit))
+            .sort({ createdAt: -1 }); 
+
+        res.status(200).json({
+            message: 'Books fetched successfully',
+            totalItems,
+            totalPages: Math.ceil(totalItems / limit),
+            currentPage: parseInt(page),
+            books,
+        });
     } catch (error) {
         res.status(500).json({ message: 'Failed to get books', error: error.message });
     }
 };
+
 
 
 
